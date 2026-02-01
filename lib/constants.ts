@@ -1,0 +1,96 @@
+import { FileType, AccountType } from "./types";
+
+export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
+    [AccountType.REALDEBRID]: "Real-Debrid",
+    [AccountType.TORBOX]: "TorBox",
+    [AccountType.ALLDEBRID]: "AllDebrid",
+    [AccountType.PREMIUMIZE]: "Premiumize",
+    [AccountType.NZBDAV]: "Usenet (nzbdav)",
+};
+
+export const ACCOUNT_TYPE_ICONS: Record<AccountType, string> = {
+    [AccountType.REALDEBRID]: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/real-debrid.png",
+    [AccountType.TORBOX]: "https://wsrv.nl/?url=https://i.ibb.co/YgB6zFK/icon.png&w=280&h=280&maxage=1y",
+    [AccountType.ALLDEBRID]: "https://wsrv.nl/?url=https://i.ibb.co/tTDfYx0v/icon.jpg&w=280&h=280&maxage=1y",
+    [AccountType.PREMIUMIZE]: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/premiumize.png",
+    [AccountType.NZBDAV]: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/sabnzbd.png",
+};
+
+export const EXTENSION_TO_FILE_TYPE: Record<string, FileType> = {
+    // Video
+    mp4: FileType.VIDEO,
+    mkv: FileType.VIDEO,
+    avi: FileType.VIDEO,
+    mov: FileType.VIDEO,
+    wmv: FileType.VIDEO,
+    flv: FileType.VIDEO,
+    webm: FileType.VIDEO,
+    m4v: FileType.VIDEO,
+    m3u8: FileType.VIDEO,
+    m3u: FileType.VIDEO,
+
+    // Audio
+    mp3: FileType.AUDIO,
+    flac: FileType.AUDIO,
+    wav: FileType.AUDIO,
+    aac: FileType.AUDIO,
+    ogg: FileType.AUDIO,
+    wma: FileType.AUDIO,
+    m4a: FileType.AUDIO,
+    opus: FileType.AUDIO,
+
+    // Image
+    jpg: FileType.IMAGE,
+    jpeg: FileType.IMAGE,
+    png: FileType.IMAGE,
+    gif: FileType.IMAGE,
+    bmp: FileType.IMAGE,
+    webp: FileType.IMAGE,
+    svg: FileType.IMAGE,
+    tiff: FileType.IMAGE,
+    ico: FileType.IMAGE,
+
+    // Document
+    pdf: FileType.DOCUMENT,
+    doc: FileType.DOCUMENT,
+    docx: FileType.DOCUMENT,
+    rtf: FileType.DOCUMENT,
+    epub: FileType.DOCUMENT,
+    mobi: FileType.DOCUMENT,
+
+    // Archive
+    zip: FileType.ARCHIVE,
+    rar: FileType.ARCHIVE,
+    "7z": FileType.ARCHIVE,
+    tar: FileType.ARCHIVE,
+    gz: FileType.ARCHIVE,
+    bz2: FileType.ARCHIVE,
+    xz: FileType.ARCHIVE,
+
+    // Text
+    txt: FileType.TEXT,
+    nfo: FileType.TEXT,
+    md: FileType.TEXT,
+    markdown: FileType.TEXT,
+
+    // Subtitles
+    srt: FileType.TEXT,
+    vtt: FileType.TEXT,
+    ass: FileType.TEXT,
+    ssa: FileType.TEXT,
+    sub: FileType.TEXT,
+    sbv: FileType.TEXT,
+    scc: FileType.TEXT,
+};
+
+export const TRASH_SIZE_THRESHOLD = 1024 * 1024; // 1MB in bytes
+export const QUERY_CACHE_MAX_AGE = 1000 * 60 * 60 * 24; // 24 hours
+export const QUERY_CACHE_STALE_TIME = 1000 * 60 * 60; // 1 hour
+export const PAGE_SIZE = 50;
+export const WEB_DOWNLOADS_PAGE_SIZE = 50;
+export const USER_AGENT = "StreamUI";
+export const CAROUSEL_AUTO_DELAY = 3000; // 3 seconds
+
+// External links
+export const DISCORD_URL = process.env.NEXT_PUBLIC_DISCORD_URL;
+export const CORS_PROXY_URL = process.env.NEXT_PUBLIC_CORS_PROXY_URL || "https://corsproxy.io/?url=";

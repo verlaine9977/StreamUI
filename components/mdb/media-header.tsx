@@ -1,0 +1,236 @@
+import { type TraktMedia } from "@/lib/trakt";
+import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { MediaStats } from "./media-stats";
+import { FavoriteButton } from "./favorite-button";
+import { memo } from "react";
+import { getPosterUrl, getBackdropUrl } from "@/lib/utils/trakt";
+import { ArrowUpRightIcon, Star } from "lucide-react";
+
+interface MediaHeaderProps {
+    media: TraktMedia;
+    mediaId: string;
+    type: "movie" | "show";
+}
+
+export const MediaHeader = memo(function MediaHeader({ media, type }: MediaHeaderProps) {
+    const posterUrl =
+        getPosterUrl(media.images) ||
+        `https://placehold.co/300x450/0a0a0a/1a1a1a?text=${encodeURIComponent(media.title)}`;
+    const backdropUrl = getBackdropUrl(media.images);
+
+    return (
+        <div className="relative">
+            {/* Backdrop */}
+            {backdropUrl && (
+                <>
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-screen h-[35vh] overflow-hidden -mt-6">
+                        <img
+                            src={backdropUrl}
+                            alt=""
+                            className="w-full h-full object-cover opacity-50"
+                            loading="eager"
+                            decoding="async"
+                        />
+                    </div>
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-screen h-[35vh] bg-gradient-to-t from-background via-background/50 to-transparent -mt-6" />
+                </>
+            )}
+
+            {/* Content */}
+            <div className={backdropUrl ? "relative pt-[18vh] sm:pt-[22vh] md:pt-[24vh] pb-6" : "pb-6"}>
+                <div className="grid md:grid-cols-[180px_1fr] lg:grid-cols-[200px_1fr] gap-5 md:gap-6">
+                    {/* Poster Column */}
+                    <div className="space-y-3">
+                        <div className="w-[140px] md:w-full aspect-2/3 overflow-hidden rounded-sm bg-muted/50">
+                            <img
+                                src={posterUrl}
+                                alt={media.title}
+                                className="w-full h-full object-cover"
+                                loading="eager"
+                                decoding="async"
+                            />
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="hidden md:flex flex-col gap-1.5">
+                            {media.ids?.imdb && (
+                                <FavoriteButton
+                                    imdbId={media.ids.imdb}
+                                    mediaType={type}
+                                    title={media.title}
+                                    year={media.year}
+                                    posterUrl={posterUrl}
+                                    slug={media.ids?.slug}
+                                    traktId={media.ids?.trakt}
+                                    tmdbId={media.ids?.tmdb}
+                                    variant="default"
+                                    className="w-full justify-center text-xs h-8"
+                                />
+                            )}
+                            {media.trailer && (
+                                <Button asChild variant="outline" size="sm" className="w-full text-xs">
+                                    <Link href={media.trailer} target="_blank" rel="noopener">
+                                        Trailer
+                                        <ArrowUpRightIcon className="size-3 ml-1 opacity-50" />
+                                    </Link>
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Info Column */}
+                    <div className="space-y-4">
+                        {/* Title & Type */}
+                        <div className="space-y-2">
+                            <div className="text-xs tracking-widest uppercase text-muted-foreground">
+                                {type === "movie" ? "Film" : "Series"}
+                            </div>
+                            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-light leading-tight">{media.title}</h1>
+                        </div>
+
+                        {/* Metadata Line */}
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                            {media.year && <span>{media.year}</span>}
+                            {media.rating && (
+                                <>
+                                    <span className="text-border">·</span>
+                                    <span className="flex items-center gap-1.5">
+                                        <Star className="size-4 fill-[#F5C518] text-[#F5C518]" />
+                                        <span className="text-foreground font-medium">{media.rating.toFixed(1)}</span>
+                                        <span className="text-muted-foreground/60">/10</span>
+                                    </span>
+                                </>
+                            )}
+                            {media.runtime && (
+                                <>
+                                    <span className="text-border">·</span>
+                                    <span>{media.runtime}m</span>
+                                </>
+                            )}
+                            {media.certification && (
+                                <>
+                                    <span className="text-border">·</span>
+                                    <Badge>{media.certification}</Badge>
+                                </>
+                            )}
+                        </div>
+
+                        {/* Genres */}
+                        {media.genres && media.genres.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                                {media.genres.map((genre) => (
+                                    <span
+                                        key={genre}
+                                        className="text-xs text-foreground/80 px-2.5 py-1 bg-muted/50 rounded-sm">
+                                        {genre}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Overview */}
+                        {media.overview && (
+                            <div className="space-y-2">
+                                <p className="text-sm sm:text-base text-foreground/80 leading-relaxed max-w-2xl">
+                                    {media.overview}
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Stats */}
+                        <MediaStats media={media} type={type} />
+
+                        {/* External Links */}
+                        {media.ids && (
+                            <div className="flex flex-wrap items-center gap-5 pt-2">
+                                {media.ids?.imdb && (
+                                    <Link
+                                        href={`https://www.imdb.com/title/${media.ids?.imdb}`}
+                                        target="_blank"
+                                        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                                        <img
+                                            src="https://cdn.jsdelivr.net/npm/simple-icons@v14/icons/imdb.svg"
+                                            alt=""
+                                            className="size-4 opacity-60 dark:invert"
+                                        />
+                                        IMDb
+                                    </Link>
+                                )}
+                                {media.ids.tmdb && (
+                                    <Link
+                                        href={`https://www.themoviedb.org/${type}/${media.ids.tmdb}`}
+                                        target="_blank"
+                                        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                                        <img
+                                            src="https://cdn.jsdelivr.net/npm/simple-icons@v14/icons/themoviedatabase.svg"
+                                            alt=""
+                                            className="size-4 opacity-60 dark:invert"
+                                        />
+                                        TMDB
+                                    </Link>
+                                )}
+                                {media.ids.trakt && (
+                                    <Link
+                                        href={`https://trakt.tv/${type === "movie" ? "movies" : "shows"}/${media.ids.trakt}`}
+                                        target="_blank"
+                                        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                                        <img
+                                            src="https://cdn.jsdelivr.net/npm/simple-icons@v14/icons/trakt.svg"
+                                            alt=""
+                                            className="size-4 opacity-60 dark:invert"
+                                        />
+                                        Trakt
+                                    </Link>
+                                )}
+                                {type === "show" && media.ids?.imdb && (
+                                    <Link
+                                        href={`https://tvcharts.co/show/${media.ids?.imdb}`}
+                                        target="_blank"
+                                        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                                        <ArrowUpRightIcon className="size-4 opacity-60" />
+                                        TV Charts
+                                    </Link>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Mobile Action Buttons */}
+                        <div className="flex md:hidden flex-wrap gap-2 pt-2">
+                            {media.ids?.imdb && (
+                                <FavoriteButton
+                                    imdbId={media.ids.imdb}
+                                    mediaType={type}
+                                    title={media.title}
+                                    year={media.year}
+                                    posterUrl={posterUrl}
+                                    slug={media.ids?.slug}
+                                    traktId={media.ids?.trakt}
+                                    tmdbId={media.ids?.tmdb}
+                                    variant="default"
+                                />
+                            )}
+                            {media.trailer && (
+                                <Button asChild variant="outline">
+                                    <Link href={media.trailer} target="_blank" rel="noopener">
+                                        Trailer
+                                        <ArrowUpRightIcon className="size-4 ml-1 opacity-50" />
+                                    </Link>
+                                </Button>
+                            )}
+                            {media.homepage && (
+                                <Button asChild variant="ghost" className="text-muted-foreground">
+                                    <Link href={media.homepage} target="_blank" rel="noopener">
+                                        Website
+                                        <ArrowUpRightIcon className="size-4 ml-1 opacity-50" />
+                                    </Link>
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+});
