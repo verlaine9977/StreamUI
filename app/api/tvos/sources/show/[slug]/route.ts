@@ -87,10 +87,12 @@ export async function GET(
 
                         for (const stream of response.streams || []) {
                             const parsed = parseStream(stream, addon.id, addon.name);
-                            if (parsed.url) {
+                            // Only include streams with HTTP URLs (not magnet links)
+                            const streamUrl = parsed.url || stream.url;
+                            if (streamUrl && (streamUrl.startsWith("http://") || streamUrl.startsWith("https://"))) {
                                 allStreams.push({
                                     name: parsed.title || stream.name || "Unknown",
-                                    url: parsed.url,
+                                    url: streamUrl,
                                     quality: parsed.resolution,
                                     size: parsed.size,
                                     addon: addon.name,

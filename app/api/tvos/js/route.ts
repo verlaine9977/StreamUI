@@ -246,7 +246,19 @@ function playStream(url, title, description) {
 
 // Play with options - on tvOS we can only use native player
 function playWithOptions(url, title, description) {
-    console.log("Playing:", url);
+    console.log("Attempting to play:", url);
+
+    if (!url) {
+        showAlert("Error", "No stream URL available");
+        return;
+    }
+
+    // Check if URL looks valid
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+        showAlert("Unsupported Stream", "This stream type is not supported on Apple TV. The URL must be a direct HTTP link to a video file.");
+        return;
+    }
+
     playStream(url, title, description);
 }
 
