@@ -204,5 +204,19 @@ export const playUrl = ({ url, fileName, player }: { url: string; fileName: stri
     }
 
     const playerUrl = PLAYER_URLS[selectedPlayer](url, fileName);
-    window.open(playerUrl, "_self");
+    const platform = detectPlatform();
+
+    // For Android intents, use location.href which is more reliable in PWAs
+    if (platform === Platform.ANDROID && playerUrl.startsWith("intent:")) {
+        window.location.href = playerUrl;
+        return;
+    }
+
+    // For other platforms, try creating a link element (more reliable for custom schemes)
+    const link = document.createElement("a");
+    link.href = playerUrl;
+    link.style.display = "none";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 };
