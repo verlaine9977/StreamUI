@@ -39,6 +39,15 @@ export const metadata: Metadata = {
     keywords: siteConfig.keywords,
     authors: [{ name: "Adnan Ahmad", url: "https://viperadnan.com" }],
     creator: "Adnan Ahmad",
+    manifest: "/manifest.json",
+    appleWebApp: {
+        capable: true,
+        statusBarStyle: "black-translucent",
+        title: siteConfig.name,
+    },
+    formatDetection: {
+        telephone: false,
+    },
     openGraph: {
         type: "website",
         locale: "en_US",
@@ -74,8 +83,12 @@ export const metadata: Metadata = {
         },
     },
     icons: {
-        icon: "/icon.svg",
-        apple: "/icon.svg",
+        icon: [
+            { url: "/icon.svg", type: "image/svg+xml" },
+            { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
+            { url: "/icons/icon-512x512.png", sizes: "512x512", type: "image/png" },
+        ],
+        apple: "/apple-touch-icon.png",
     },
 };
 
@@ -105,6 +118,8 @@ export default function RootLayout({
         <html lang="en" suppressHydrationWarning>
             <head>
                 <link rel="preload" href="/logo.svg" as="image" type="image/svg+xml" />
+                <meta name="theme-color" content="#000000" />
+                <meta name="mobile-web-app-capable" content="yes" />
             </head>
             <body className={cn(font.className, "antialiased")}>
                 <Providers>{children}</Providers>
