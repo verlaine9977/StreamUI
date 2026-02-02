@@ -317,11 +317,13 @@ export class TraktClient {
         }
 
         try {
-            // Headers are added server-side by the API proxy
+            // Include Trakt API headers for server-side requests
             const response = await fetch(url, {
                 ...options,
                 headers: {
                     "Content-Type": "application/json",
+                    "trakt-api-version": this.apiVersion,
+                    "trakt-api-key": this.clientId,
                     ...options.headers,
                 },
             });

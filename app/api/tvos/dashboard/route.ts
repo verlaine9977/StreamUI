@@ -8,7 +8,10 @@ import {
 const TRAKT_CLIENT_ID = process.env.NEXT_PUBLIC_TRAKT_CLIENT_ID;
 
 export async function GET(request: NextRequest) {
-    const baseUrl = request.nextUrl.origin;
+    // Get the actual public URL from forwarded headers (when behind reverse proxy)
+    const forwardedProto = request.headers.get("x-forwarded-proto") || "https";
+    const forwardedHost = request.headers.get("x-forwarded-host") || request.headers.get("host");
+    const baseUrl = forwardedHost ? `${forwardedProto}://${forwardedHost}` : request.nextUrl.origin;
 
     if (!TRAKT_CLIENT_ID) {
         const tvml = generateAlertTemplate(
@@ -71,13 +74,44 @@ export async function GET(request: NextRequest) {
         });
     } catch (error) {
         console.error("Dashboard error:", error);
-        const tvml = generateAlertTemplate(
-            "Error",
-            "Failed to load content. Please try again later."
-        );
-        return new NextResponse(tvml, {
+
+        // Return a fallback dashboard with placeholder message
+        const fallbackTvml = `<?xml version="1.0" encoding="UTF-8" ?>
+<document>
+    <stackTemplate>
+        <banner>
+            <title>StreamUI</title>
+            <description>Welcome to StreamUI for Apple TV</description>
+        </banner>
+        <collectionList>
+            <grid>
+                <section>
+                    <header>
+                        <title>Getting Started</title>
+                    </header>
+                    <lockup>
+                        <img src="https://via.placeholder.com/400x225/1a1a2e/ffffff?text=Search" width="400" height="225" />
+                        <title>Search</title>
+                        <description>Use the Search tab to find movies and shows</description>
+                    </lockup>
+                    <lockup>
+                        <img src="https://via.placeholder.com/400x225/16213e/ffffff?text=Files" width="400" height="225" />
+                        <title>Files</title>
+                        <description>Browse your debrid files</description>
+                    </lockup>
+                    <lockup>
+                        <img src="https://via.placeholder.com/400x225/0f3460/ffffff?text=Settings" width="400" height="225" />
+                        <title>Settings</title>
+                        <description>Configure your accounts</description>
+                    </lockup>
+                </section>
+            </grid>
+        </collectionList>
+    </stackTemplate>
+</document>`;
+
+        return new NextResponse(fallbackTvml, {
             headers: { "Content-Type": "application/xml" },
-            status: 500,
         });
     }
 }

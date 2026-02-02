@@ -10,7 +10,10 @@ import {
 const TRAKT_CLIENT_ID = process.env.NEXT_PUBLIC_TRAKT_CLIENT_ID;
 
 export async function GET(request: NextRequest) {
-    const baseUrl = request.nextUrl.origin;
+    // Get the actual public URL from forwarded headers (when behind reverse proxy)
+    const forwardedProto = request.headers.get("x-forwarded-proto") || "https";
+    const forwardedHost = request.headers.get("x-forwarded-host") || request.headers.get("host");
+    const baseUrl = forwardedHost ? `${forwardedProto}://${forwardedHost}` : request.nextUrl.origin;
     const query = request.nextUrl.searchParams.get("q");
 
     // If no query, return the search template

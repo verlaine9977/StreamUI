@@ -4,7 +4,10 @@ import { NextRequest, NextResponse } from "next/server";
 // This is loaded by TVMLKit and handles all client-side logic
 
 export async function GET(request: NextRequest) {
-    const baseUrl = request.nextUrl.origin;
+    // Get the actual public URL from forwarded headers (when behind reverse proxy)
+    const forwardedProto = request.headers.get("x-forwarded-proto") || "https";
+    const forwardedHost = request.headers.get("x-forwarded-host") || request.headers.get("host");
+    const baseUrl = forwardedHost ? `${forwardedProto}://${forwardedHost}` : request.nextUrl.origin;
 
     const js = `
 // StreamUI tvOS Application
@@ -12,18 +15,68 @@ export async function GET(request: NextRequest) {
 
 var baseURL = "${baseUrl}";
 
-// Global app reference
-var navigationDocument;
-
 App.onLaunch = function(options) {
     console.log("StreamUI tvOS launched");
+    console.log("Options:", JSON.stringify(options));
+    console.log("baseURL:", baseURL);
+    console.log("navigationDocument exists:", typeof navigationDocument !== "undefined");
+    console.log("navigationDocument:", navigationDocument);
 
-    // Store navigation document reference
-    navigationDocument = App.navigationDocument;
+    // Load the main menu as the initial document
+    var menuUrl = baseURL + "/api/tvos/menu";
+    console.log("Loading menu from:", menuUrl);
 
-    // Load the main menu
-    loadMainMenu();
+    var request = new XMLHttpRequest();
+    request.responseType = "document";
+    request.addEventListener("load", function() {
+        console.log("Menu request completed, status:", request.status);
+        console.log("Response type:", request.responseType);
+
+        if (request.status >= 200 && request.status < 300) {
+            var doc = request.responseXML;
+            console.log("Parsed document:", doc);
+
+            if (doc) {
+                console.log("Document root element:", doc.documentElement ? doc.documentElement.tagName : "none");
+
+                // For the initial document, use pushDocument on navigationDocument
+                if (typeof navigationDocument !== "undefined" && navigationDocument && navigationDocument.pushDocument) {
+                    console.log("Pushing document to navigationDocument");
+                    navigationDocument.pushDocument(doc);
+                    console.log("Document pushed successfully");
+                } else {
+                    console.error("navigationDocument not available or missing pushDocument");
+                    console.error("navigationDocument type:", typeof navigationDocument);
+                }
+            } else {
+                console.error("Failed to parse XML response");
+                showErrorAlert("Failed to parse menu response");
+            }
+        } else {
+            console.error("HTTP error:", request.status, request.statusText);
+            showErrorAlert("Failed to load menu (HTTP " + request.status + ")");
+        }
+    }, false);
+
+    request.addEventListener("error", function(e) {
+        console.error("Network error:", e);
+        showErrorAlert("Network request failed");
+    }, false);
+
+    console.log("Sending menu request...");
+    request.open("GET", menuUrl, true);
+    request.send();
 };
+
+// Simple error alert for startup errors
+function showErrorAlert(message) {
+    var alertString = '<?xml version="1.0" encoding="UTF-8" ?><document><alertTemplate><title>Error</title><description>' + message + '</description><button><text>OK</text></button></alertTemplate></document>';
+    var parser = new DOMParser();
+    var alertDoc = parser.parseFromString(alertString, "application/xml");
+    if (navigationDocument) {
+        navigationDocument.presentModal(alertDoc);
+    }
+}
 
 App.onResume = function(options) {
     console.log("StreamUI tvOS resumed");
@@ -47,10 +100,12 @@ function loadDocument(url) {
     request.addEventListener("load", function() {
         if (request.status >= 200 && request.status < 300) {
             var doc = request.responseXML;
-            if (doc) {
+            if (doc && navigationDocument) {
                 navigationDocument.pushDocument(doc);
-            } else {
+            } else if (!doc) {
                 showAlert("Error", "Failed to parse response");
+            } else {
+                console.error("navigationDocument not available");
             }
         } else {
             showAlert("Error", "Failed to load content (HTTP " + request.status + ")");
@@ -74,7 +129,7 @@ function replaceDocument(url) {
     request.addEventListener("load", function() {
         if (request.status >= 200 && request.status < 300) {
             var doc = request.responseXML;
-            if (doc) {
+            if (doc && navigationDocument && navigationDocument.documents) {
                 var currentDoc = navigationDocument.documents[navigationDocument.documents.length - 1];
                 navigationDocument.replaceDocument(doc, currentDoc);
             }
@@ -83,11 +138,6 @@ function replaceDocument(url) {
 
     request.open("GET", url, true);
     request.send();
-}
-
-// Load main menu with tabs
-function loadMainMenu() {
-    loadDocument(baseURL + "/api/tvos/menu");
 }
 
 // Load dashboard

@@ -3,7 +3,7 @@
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTheme } from "next-themes";
-import { Monitor, Moon, Sun, Play, Trash2, Clock, Info, Settings } from "lucide-react";
+import { Monitor, Moon, Sun, Play, Trash2, Clock, Info, Settings, Download, Check } from "lucide-react";
 import { useSettingsStore } from "@/lib/stores/settings";
 import { MediaPlayer } from "@/lib/types";
 import { Button } from "@/components/ui/button";

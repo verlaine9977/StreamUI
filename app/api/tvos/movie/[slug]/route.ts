@@ -12,7 +12,10 @@ export async function GET(
     { params }: { params: Promise<{ slug: string }> }
 ) {
     const { slug } = await params;
-    const baseUrl = request.nextUrl.origin;
+    // Get the actual public URL from forwarded headers (when behind reverse proxy)
+    const forwardedProto = request.headers.get("x-forwarded-proto") || "https";
+    const forwardedHost = request.headers.get("x-forwarded-host") || request.headers.get("host");
+    const baseUrl = forwardedHost ? `${forwardedProto}://${forwardedHost}` : request.nextUrl.origin;
 
     if (!TRAKT_CLIENT_ID) {
         const tvml = generateAlertTemplate(
