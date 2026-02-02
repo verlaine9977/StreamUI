@@ -112,10 +112,31 @@ export function generateShelf(
         </shelf>`;
 }
 
-// Generate the XML document wrapper
+// Dark theme styles matching web app
+const DARK_THEME_STYLES = `
+    <style>
+        .darkBackground {
+            background-color: #0a0a0f;
+        }
+        .cardBackground {
+            background-color: #1a1a2e;
+        }
+        .accentColor {
+            color: #e94560;
+        }
+        .mutedText {
+            color: #888899;
+        }
+    </style>
+`;
+
+// Generate the XML document wrapper with dark theme
 export function wrapDocument(content: string): string {
     return `<?xml version="1.0" encoding="UTF-8" ?>
-<document>
+<document theme="dark">
+    <head>
+        ${DARK_THEME_STYLES}
+    </head>
 ${content}
 </document>`;
 }

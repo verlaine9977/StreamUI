@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { TraktClient } from "@/lib/trakt";
-import { wrapDocument, escapeXml, generateAlertTemplate } from "@/lib/tvos/tvml";
+import { wrapDocument, escapeXml, generateAlertTemplate, getPosterUrl, getFanartUrl } from "@/lib/tvos/tvml";
 import { db } from "@/lib/db";
 import { addons } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -107,25 +107,46 @@ export async function GET(
             });
         }
 
-        // Generate TVML with stream list
-        const streamItems = allStreams.slice(0, 20).map(stream => `
+        // Generate TVML with stream list - better design
+        const streamItems = allStreams.slice(0, 25).map((stream, index) => {
+            const qualityBadge = stream.quality ? `[${stream.quality}]` : "";
+            const sizeBadge = stream.size || "";
+            const badges = [qualityBadge, sizeBadge].filter(Boolean).join(" ");
+
+            return `
             <listItemLockup onselect="playStream('${escapeXml(stream.url)}', '${escapeXml(movie.title)}', '${escapeXml(stream.name)}')">
+                <ordinal minLength="2">${index + 1}</ordinal>
                 <title>${escapeXml(stream.name)}</title>
-                <subtitle>${escapeXml(stream.addon)}${stream.quality ? ` • ${stream.quality}` : ""}${stream.size ? ` • ${stream.size}` : ""}</subtitle>
-            </listItemLockup>`).join("\n");
+                <relatedContent>
+                    <lockup>
+                        <title>${escapeXml(badges)}</title>
+                        <subtitle>${escapeXml(stream.addon)}</subtitle>
+                    </lockup>
+                </relatedContent>
+            </listItemLockup>`;
+        }).join("\n");
 
         const tvml = wrapDocument(`
-    <listTemplate>
-        <banner>
-            <title>${escapeXml(movie.title)}</title>
-            <subtitle>${allStreams.length} sources found</subtitle>
-        </banner>
+    <compilationTemplate>
+        <background>
+            <img src="${escapeXml(getFanartUrl(movie))}" />
+        </background>
         <list>
+            <relatedContent>
+                <lockup>
+                    <img src="${escapeXml(getPosterUrl(movie))}" width="300" height="450" />
+                    <title>${escapeXml(movie.title)}</title>
+                    <subtitle>${movie.year || ""} • ${allStreams.length} sources</subtitle>
+                </lockup>
+            </relatedContent>
+            <header>
+                <title>Select Source</title>
+            </header>
             <section>
                 ${streamItems}
             </section>
         </list>
-    </listTemplate>`);
+    </compilationTemplate>`);
 
         return new NextResponse(tvml, {
             headers: { "Content-Type": "application/xml" },

@@ -14,63 +14,80 @@ export async function GET(request: NextRequest) {
 // Loaded by TVMLKit
 
 var baseURL = "${baseUrl}";
+var currentProfileId = null;
+var currentProfileName = null;
 
 App.onLaunch = function(options) {
     console.log("StreamUI tvOS launched");
-    console.log("Options:", JSON.stringify(options));
-    console.log("baseURL:", baseURL);
-    console.log("navigationDocument exists:", typeof navigationDocument !== "undefined");
-    console.log("navigationDocument:", navigationDocument);
 
-    // Load the main menu as the initial document
-    var menuUrl = baseURL + "/api/tvos/menu";
-    console.log("Loading menu from:", menuUrl);
+    // Show profile picker first, then load main menu
+    loadProfiles();
+};
 
+// Load profile picker
+function loadProfiles() {
     var request = new XMLHttpRequest();
     request.responseType = "document";
     request.addEventListener("load", function() {
-        console.log("Menu request completed, status:", request.status);
-        console.log("Response type:", request.responseType);
-
-        if (request.status >= 200 && request.status < 300) {
-            var doc = request.responseXML;
-            console.log("Parsed document:", doc);
-
-            if (doc) {
-                console.log("Document root element:", doc.documentElement ? doc.documentElement.tagName : "none");
-
-                // For the initial document, use pushDocument on navigationDocument
-                if (typeof navigationDocument !== "undefined" && navigationDocument && navigationDocument.pushDocument) {
-                    console.log("Pushing document to navigationDocument");
-                    navigationDocument.pushDocument(doc);
-                    console.log("Document pushed successfully");
-                } else {
-                    console.error("navigationDocument not available or missing pushDocument");
-                    console.error("navigationDocument type:", typeof navigationDocument);
-                }
-            } else {
-                console.error("Failed to parse XML response");
-                showErrorAlert("Failed to parse menu response");
-            }
+        if (request.status >= 200 && request.status < 300 && request.responseXML) {
+            navigationDocument.pushDocument(request.responseXML);
         } else {
-            console.error("HTTP error:", request.status, request.statusText);
-            showErrorAlert("Failed to load menu (HTTP " + request.status + ")");
+            // No profiles or error - go straight to menu
+            loadMainMenu();
         }
     }, false);
-
-    request.addEventListener("error", function(e) {
-        console.error("Network error:", e);
-        showErrorAlert("Network request failed");
+    request.addEventListener("error", function() {
+        loadMainMenu();
     }, false);
-
-    console.log("Sending menu request...");
-    request.open("GET", menuUrl, true);
+    request.open("GET", baseURL + "/api/tvos/profiles", true);
     request.send();
-};
+}
 
-// Simple error alert for startup errors
+// Select a profile
+function selectProfile(profileId, profileName) {
+    currentProfileId = profileId;
+    currentProfileName = profileName;
+    console.log("Profile selected:", profileName);
+
+    // Replace profile picker with main menu
+    var request = new XMLHttpRequest();
+    request.responseType = "document";
+    request.addEventListener("load", function() {
+        if (request.status >= 200 && request.status < 300 && request.responseXML) {
+            var currentDoc = navigationDocument.documents[navigationDocument.documents.length - 1];
+            navigationDocument.replaceDocument(request.responseXML, currentDoc);
+        }
+    }, false);
+    request.open("GET", baseURL + "/api/tvos/menu", true);
+    request.send();
+}
+
+// Load main menu directly
+function loadMainMenu() {
+    var request = new XMLHttpRequest();
+    request.responseType = "document";
+    request.addEventListener("load", function() {
+        if (request.status >= 200 && request.status < 300 && request.responseXML) {
+            if (navigationDocument.documents.length > 0) {
+                var currentDoc = navigationDocument.documents[navigationDocument.documents.length - 1];
+                navigationDocument.replaceDocument(request.responseXML, currentDoc);
+            } else {
+                navigationDocument.pushDocument(request.responseXML);
+            }
+        } else {
+            showErrorAlert("Failed to load menu");
+        }
+    }, false);
+    request.addEventListener("error", function() {
+        showErrorAlert("Network error");
+    }, false);
+    request.open("GET", baseURL + "/api/tvos/menu", true);
+    request.send();
+}
+
+// Simple error alert
 function showErrorAlert(message) {
-    var alertString = '<?xml version="1.0" encoding="UTF-8" ?><document><alertTemplate><title>Error</title><description>' + message + '</description><button><text>OK</text></button></alertTemplate></document>';
+    var alertString = '<?xml version="1.0" encoding="UTF-8" ?><document theme="dark"><alertTemplate><title>Error</title><description>' + message + '</description><button><text>OK</text></button></alertTemplate></document>';
     var parser = new DOMParser();
     var alertDoc = parser.parseFromString(alertString, "application/xml");
     if (navigationDocument) {
