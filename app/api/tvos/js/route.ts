@@ -211,67 +211,43 @@ function playMedia(type, slug) {
 function playStream(url, title, description) {
     console.log("Playing stream:", url);
 
-    var player = new Player();
-    var playlist = new Playlist();
+    try {
+        var player = new Player();
+        var playlist = new Playlist();
 
-    var mediaItem = new MediaItem("video", url);
-    mediaItem.title = title || "StreamUI";
-    mediaItem.description = description || "";
+        var mediaItem = new MediaItem("video", url);
+        mediaItem.title = title || "StreamUI";
+        mediaItem.description = description || "";
 
-    playlist.push(mediaItem);
-    player.playlist = playlist;
+        playlist.push(mediaItem);
+        player.playlist = playlist;
 
-    player.addEventListener("stateDidChange", function(event) {
-        console.log("Player state changed:", event.state);
-    });
+        player.addEventListener("stateDidChange", function(event) {
+            console.log("Player state:", event.state);
+            if (event.state === "error") {
+                showAlert("Playback Error", "Could not play this stream. The format may not be supported.");
+            }
+        });
 
-    player.addEventListener("mediaItemDidChange", function(event) {
-        console.log("Media item changed");
-    });
+        player.addEventListener("mediaItemDidChange", function(event) {
+            console.log("Media item changed");
+        });
 
-    player.play();
+        player.addEventListener("requestSeekToTime", function(event) {
+            return event.requestedTime;
+        });
+
+        player.play();
+    } catch (e) {
+        console.error("Player error:", e);
+        showAlert("Error", "Failed to start playback: " + (e.message || e));
+    }
 }
 
-// Store pending stream for playback
-var pendingStream = null;
-
-// Show player options and play
+// Play with options - on tvOS we can only use native player
 function playWithOptions(url, title, description) {
-    console.log("Play with options:", url);
-
-    // Store for later use
-    pendingStream = { url: url, title: title, description: description };
-
-    var alertString = '<?xml version="1.0" encoding="UTF-8" ?><document theme="dark"><alertTemplate><title>Select Player</title><description>' + escapeXML(title || "Video") + '</description><button onselect="playPendingWithVLC()"><text>VLC</text></button><button onselect="playPendingWithInfuse()"><text>Infuse</text></button><button onselect="playPendingNative()"><text>Native Player</text></button><button onselect="dismissModal()"><text>Cancel</text></button></alertTemplate></document>';
-
-    var parser = new DOMParser();
-    var alertDoc = parser.parseFromString(alertString, "application/xml");
-    navigationDocument.presentModal(alertDoc);
-}
-
-// Play pending stream with VLC
-function playPendingWithVLC() {
-    dismissModal();
-    if (!pendingStream) return;
-    console.log("Opening VLC with:", pendingStream.url);
-    var vlcUrl = "vlc-x-callback://x-callback-url/stream?url=" + encodeURIComponent(pendingStream.url);
-    App.openURL(vlcUrl);
-}
-
-// Play pending stream with Infuse
-function playPendingWithInfuse() {
-    dismissModal();
-    if (!pendingStream) return;
-    console.log("Opening Infuse with:", pendingStream.url);
-    var infuseUrl = "infuse://x-callback-url/play?url=" + encodeURIComponent(pendingStream.url);
-    App.openURL(infuseUrl);
-}
-
-// Play pending stream with native player
-function playPendingNative() {
-    dismissModal();
-    if (!pendingStream) return;
-    playStream(pendingStream.url, pendingStream.title, pendingStream.description);
+    console.log("Playing:", url);
+    playStream(url, title, description);
 }
 
 // Play trailer (YouTube URL)
