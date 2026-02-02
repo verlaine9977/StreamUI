@@ -18,11 +18,16 @@ export function getPosterUrl(media: TraktMedia | undefined, size: "w300" | "w500
     if (!media?.images?.poster?.[0]) {
         return ""; // Fallback handled by tvOS
     }
-    // Trakt returns TMDB image paths, construct full URL
     const posterPath = media.images.poster[0];
+    // If it's already a full URL, return as is
     if (posterPath.startsWith("http")) {
         return posterPath;
     }
+    // Trakt now returns media.trakt.tv paths
+    if (posterPath.includes("media.trakt.tv")) {
+        return `https://${posterPath}`;
+    }
+    // Legacy TMDB paths
     return `https://image.tmdb.org/t/p/${size}${posterPath}`;
 }
 
@@ -32,9 +37,15 @@ export function getFanartUrl(media: TraktMedia | undefined, size: "w780" | "w128
         return "";
     }
     const fanartPath = media.images.fanart[0];
+    // If it's already a full URL, return as is
     if (fanartPath.startsWith("http")) {
         return fanartPath;
     }
+    // Trakt now returns media.trakt.tv paths
+    if (fanartPath.includes("media.trakt.tv")) {
+        return `https://${fanartPath}`;
+    }
+    // Legacy TMDB paths
     return `https://image.tmdb.org/t/p/${size}${fanartPath}`;
 }
 

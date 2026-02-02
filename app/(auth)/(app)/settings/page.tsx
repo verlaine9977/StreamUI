@@ -7,8 +7,9 @@ import { Monitor, Moon, Sun, Play, Trash2, Clock, Info, Settings, Download, Chec
 import { useSettingsStore } from "@/lib/stores/settings";
 import { MediaPlayer } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { del } from "idb-keyval";
+import { usePwaInstall } from "@/hooks/use-pwa-install";
 import { queryClient } from "@/lib/query-client";
 import { toast } from "sonner";
 import { useAuthGuaranteed } from "@/components/auth/auth-provider";
@@ -34,6 +35,7 @@ export default function SettingsPage() {
     const downloadLinkMaxAge = get("downloadLinkMaxAge");
     const downloadLinkMaxAgePresets = getPresets("downloadLinkMaxAge") || [];
     const [isClearing, setIsClearing] = useState(false);
+    const { isInstallable, isInstalled, install } = usePwaInstall();
     const platform = detectPlatform();
     const setupInstruction = getPlayerSetupInstruction(mediaPlayer, platform);
     const isPlayerSupported = isSupportedPlayer(mediaPlayer, platform);
@@ -222,6 +224,39 @@ export default function SettingsPage() {
                 <SectionDivider label="Cache Warmer" />
                 <CacheWarmerPanel />
             </section>
+
+            {/* Install App Section */}
+            {(isInstallable || isInstalled) && (
+                <section className="space-y-4">
+                    <SectionDivider label="Install App" />
+
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-sm border border-border/50 p-3">
+                        <div>
+                            <div className="flex items-center gap-2">
+                                {isInstalled ? (
+                                    <Check className="size-4 text-green-500" />
+                                ) : (
+                                    <Download className="size-4 text-muted-foreground" />
+                                )}
+                                <p className="text-sm">
+                                    {isInstalled ? "App Installed" : "Install StreamUI"}
+                                </p>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                {isInstalled
+                                    ? "StreamUI is installed on your device"
+                                    : "Add StreamUI to your home screen for quick access"}
+                            </p>
+                        </div>
+                        {!isInstalled && (
+                            <Button onClick={install} variant="outline">
+                                <Download className="size-4 mr-2" />
+                                Install
+                            </Button>
+                        )}
+                    </div>
+                </section>
+            )}
 
             {/* About Section */}
             <section className="space-y-4">
