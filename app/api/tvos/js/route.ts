@@ -244,7 +244,7 @@ function playStream(url, title, description) {
     }
 }
 
-// Play with options - on tvOS we can only use native player
+// Play with options - use VLC if available, otherwise native player
 function playWithOptions(url, title, description) {
     console.log("Attempting to play:", url);
 
@@ -255,10 +255,19 @@ function playWithOptions(url, title, description) {
 
     // Check if URL looks valid
     if (!url.startsWith("http://") && !url.startsWith("https://")) {
-        showAlert("Unsupported Stream", "This stream type is not supported on Apple TV. The URL must be a direct HTTP link to a video file.");
+        showAlert("Unsupported Stream", "This stream type is not supported. URL must be HTTP/HTTPS.");
         return;
     }
 
+    // Try VLC player first (native bridge)
+    if (typeof playWithVLC === "function") {
+        console.log("Using VLC player");
+        playWithVLC(url, title || "Video");
+        return;
+    }
+
+    // Fallback to native player
+    console.log("VLC not available, using native player");
     playStream(url, title, description);
 }
 
