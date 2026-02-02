@@ -62,6 +62,29 @@ function selectProfile(profileId, profileName) {
     request.send();
 }
 
+// Switch profile - go back to profile picker
+function switchProfile() {
+    console.log("Switching profile");
+    // Clear current profile
+    currentProfileId = null;
+    currentProfileName = null;
+
+    // Load profile picker and replace everything
+    var request = new XMLHttpRequest();
+    request.responseType = "document";
+    request.addEventListener("load", function() {
+        if (request.status >= 200 && request.status < 300 && request.responseXML) {
+            // Clear all documents and start fresh
+            while (navigationDocument.documents.length > 0) {
+                navigationDocument.popDocument();
+            }
+            navigationDocument.pushDocument(request.responseXML);
+        }
+    }, false);
+    request.open("GET", baseURL + "/api/tvos/profiles", true);
+    request.send();
+}
+
 // Load main menu directly
 function loadMainMenu() {
     var request = new XMLHttpRequest();
@@ -209,66 +232,46 @@ function playStream(url, title, description) {
     player.play();
 }
 
+// Store pending stream for playback
+var pendingStream = null;
+
 // Show player options and play
 function playWithOptions(url, title, description) {
     console.log("Play with options:", url);
 
-    var encodedUrl = encodeURIComponent(url);
-    var encodedTitle = encodeURIComponent(title || "Video");
+    // Store for later use
+    pendingStream = { url: url, title: title, description: description };
 
-    var alertString = \`<?xml version="1.0" encoding="UTF-8" ?>
-    <document theme="dark">
-        <alertTemplate>
-            <title>Select Player</title>
-            <description>\${escapeXML(title || "Select how to play")}</description>
-            <button onselect="playWithVLC('\${escapeXML(url)}')">
-                <text>VLC</text>
-            </button>
-            <button onselect="playWithInfuse('\${escapeXML(url)}', '\${escapeXML(title)}')">
-                <text>Infuse</text>
-            </button>
-            <button onselect="dismissModal(); playStream('\${escapeXML(url)}', '\${escapeXML(title)}', '\${escapeXML(description)}')">
-                <text>Native Player</text>
-            </button>
-            <button onselect="dismissModal()">
-                <text>Cancel</text>
-            </button>
-        </alertTemplate>
-    </document>\`;
+    var alertString = '<?xml version="1.0" encoding="UTF-8" ?><document theme="dark"><alertTemplate><title>Select Player</title><description>' + escapeXML(title || "Video") + '</description><button onselect="playPendingWithVLC()"><text>VLC</text></button><button onselect="playPendingWithInfuse()"><text>Infuse</text></button><button onselect="playPendingNative()"><text>Native Player</text></button><button onselect="dismissModal()"><text>Cancel</text></button></alertTemplate></document>';
 
     var parser = new DOMParser();
     var alertDoc = parser.parseFromString(alertString, "application/xml");
     navigationDocument.presentModal(alertDoc);
 }
 
-// Play with VLC
-function playWithVLC(url) {
+// Play pending stream with VLC
+function playPendingWithVLC() {
     dismissModal();
-    console.log("Opening VLC with:", url);
-    // VLC for tvOS URL scheme
-    var vlcUrl = "vlc-x-callback://x-callback-url/stream?url=" + encodeURIComponent(url);
-
-    // Try to open VLC
-    if (typeof App !== "undefined" && App.openURL) {
-        App.openURL(vlcUrl);
-    } else {
-        // Fallback - show the URL
-        showAlert("VLC", "Install VLC from App Store, then copy this URL:\\n" + url);
-    }
+    if (!pendingStream) return;
+    console.log("Opening VLC with:", pendingStream.url);
+    var vlcUrl = "vlc-x-callback://x-callback-url/stream?url=" + encodeURIComponent(pendingStream.url);
+    App.openURL(vlcUrl);
 }
 
-// Play with Infuse
-function playWithInfuse(url, title) {
+// Play pending stream with Infuse
+function playPendingWithInfuse() {
     dismissModal();
-    console.log("Opening Infuse with:", url);
-    // Infuse URL scheme
-    var infuseUrl = "infuse://x-callback-url/play?url=" + encodeURIComponent(url);
+    if (!pendingStream) return;
+    console.log("Opening Infuse with:", pendingStream.url);
+    var infuseUrl = "infuse://x-callback-url/play?url=" + encodeURIComponent(pendingStream.url);
+    App.openURL(infuseUrl);
+}
 
-    if (typeof App !== "undefined" && App.openURL) {
-        App.openURL(infuseUrl);
-    } else {
-        showAlert("Infuse", "Install Infuse from App Store to use this player.");
-    }
+// Play pending stream with native player
+function playPendingNative() {
+    dismissModal();
+    if (!pendingStream) return;
+    playStream(pendingStream.url, pendingStream.title, pendingStream.description);
 }
 
 // Play trailer (YouTube URL)

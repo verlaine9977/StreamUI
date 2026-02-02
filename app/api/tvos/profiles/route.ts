@@ -12,11 +12,6 @@ const PROFILE_COLORS = [
 ];
 
 export async function GET(request: NextRequest) {
-    // Get the actual public URL from forwarded headers
-    const forwardedProto = request.headers.get("x-forwarded-proto") || "https";
-    const forwardedHost = request.headers.get("x-forwarded-host") || request.headers.get("host");
-    const baseUrl = forwardedHost ? `${forwardedProto}://${forwardedHost}` : request.nextUrl.origin;
-
     try {
         // Get user profiles
         const userProfiles = await db
@@ -40,17 +35,15 @@ export async function GET(request: NextRequest) {
             });
         }
 
-        // Generate profile lockups with colored backgrounds and emoji avatars
+        // Generate profile cards - simple colored boxes with names
         const profileItems = userProfiles.map((profile, index) => {
             const color = profile.color || PROFILE_COLORS[index % PROFILE_COLORS.length];
             const avatar = profile.avatar || "👤";
-            // Use placeholder.com for colored backgrounds with emoji overlay
-            const imgUrl = `https://via.placeholder.com/300x300/${color.replace('#', '')}/ffffff?text=${encodeURIComponent(avatar)}`;
 
             return `
                 <lockup onselect="selectProfile('${profile.id}', '${escapeXml(profile.name)}')">
-                    <img src="${imgUrl}" width="180" height="180" style="tv-placeholder: tv; border-radius: 16" />
-                    <title class="showTextOnHighlight">${escapeXml(profile.name)}</title>
+                    <badge src="resource://button-rated" class="whiteColor" />
+                    <title>${escapeXml(avatar)} ${escapeXml(profile.name)}</title>
                 </lockup>`;
         }).join("\n");
 
@@ -58,7 +51,6 @@ export async function GET(request: NextRequest) {
     <stackTemplate>
         <banner>
             <title>Who's Watching?</title>
-            <subtitle>Select a profile to continue</subtitle>
         </banner>
         <collectionList>
             <shelf centered="true">
@@ -78,8 +70,8 @@ export async function GET(request: NextRequest) {
     <alertTemplate>
         <title>Error</title>
         <description>Failed to load profiles.</description>
-        <button onselect="dismissModal()">
-            <text>OK</text>
+        <button onselect="loadMainMenu()">
+            <text>Continue</text>
         </button>
     </alertTemplate>`);
 

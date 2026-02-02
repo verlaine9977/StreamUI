@@ -125,46 +125,34 @@ export async function GET(
                 return (aQuality === -1 ? 99 : aQuality) - (bQuality === -1 ? 99 : bQuality);
             });
 
-            // Generate TVML with stream list
-            const streamItems = sortedStreams.slice(0, 25).map((stream, index) => {
-                const qualityBadge = stream.quality ? `[${stream.quality}]` : "";
-                const sizeBadge = stream.size || "";
-                const badges = [qualityBadge, sizeBadge].filter(Boolean).join(" ");
+            // Generate TVML with stream list - simple readable format
+            const streamItems = sortedStreams.slice(0, 30).map((stream, index) => {
+                const quality = stream.quality || "";
+                const size = stream.size || "";
+                const subtitle = [quality, size, stream.addon].filter(Boolean).join(" • ");
 
                 return `
                 <listItemLockup onselect="playWithOptions('${escapeXml(stream.url)}', '${escapeXml(show.title)} S${season}E${episode}', '${escapeXml(stream.name)}')">
-                    <ordinal minLength="2">${index + 1}</ordinal>
                     <title>${escapeXml(stream.name)}</title>
-                    <relatedContent>
-                        <lockup>
-                            <title>${escapeXml(badges)}</title>
-                            <subtitle>${escapeXml(stream.addon)}</subtitle>
-                        </lockup>
-                    </relatedContent>
+                    <subtitle>${escapeXml(subtitle)}</subtitle>
                 </listItemLockup>`;
             }).join("\n");
 
             const tvml = wrapDocument(`
-    <compilationTemplate>
-        <background>
-            <img src="${escapeXml(getFanartUrl(show))}" />
-        </background>
+    <listTemplate>
+        <banner>
+            <title>${escapeXml(show.title)}</title>
+            <subtitle>Season ${season} Episode ${episode} • ${sortedStreams.length} sources</subtitle>
+        </banner>
         <list>
-            <relatedContent>
-                <lockup>
-                    <img src="${escapeXml(getPosterUrl(show))}" width="300" height="450" />
-                    <title>${escapeXml(show.title)}</title>
-                    <subtitle>S${season}E${episode} • ${allStreams.length} sources</subtitle>
-                </lockup>
-            </relatedContent>
             <header>
-                <title>Select Source</title>
+                <title>Select Source to Play</title>
             </header>
             <section>
                 ${streamItems}
             </section>
         </list>
-    </compilationTemplate>`);
+    </listTemplate>`);
 
             return new NextResponse(tvml, {
                 headers: { "Content-Type": "application/xml" },

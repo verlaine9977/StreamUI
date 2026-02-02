@@ -20,8 +20,8 @@ export async function GET(request: NextRequest) {
             <menuItem id="files" onselect="menuItemSelected(event, '${baseUrl}/api/tvos/files')">
                 <title>Files</title>
             </menuItem>
-            <menuItem id="settings" onselect="menuItemSelected(event, '${baseUrl}/api/tvos/settings')">
-                <title>Settings</title>
+            <menuItem id="profiles" onselect="switchProfile()">
+                <title>Switch Profile</title>
             </menuItem>
         </menuBar>
     </menuBarTemplate>
