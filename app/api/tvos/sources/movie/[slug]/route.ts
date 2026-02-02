@@ -107,14 +107,28 @@ export async function GET(
             });
         }
 
-        // Generate TVML with stream list - better design
-        const streamItems = allStreams.slice(0, 25).map((stream, index) => {
+        // Sort streams: Usenet/nzbdav first, then by quality
+        const sortedStreams = allStreams.sort((a, b) => {
+            const aIsUsenet = a.addon.toLowerCase().includes('usenet') || a.addon.toLowerCase().includes('nzb');
+            const bIsUsenet = b.addon.toLowerCase().includes('usenet') || b.addon.toLowerCase().includes('nzb');
+            if (aIsUsenet && !bIsUsenet) return -1;
+            if (!aIsUsenet && bIsUsenet) return 1;
+            // Then sort by quality (4K > 1080p > 720p > etc)
+            const qualityOrder = ['4k', '2160p', '1080p', '720p', '480p'];
+            const aQuality = qualityOrder.findIndex(q => a.quality?.toLowerCase().includes(q));
+            const bQuality = qualityOrder.findIndex(q => b.quality?.toLowerCase().includes(q));
+            return (aQuality === -1 ? 99 : aQuality) - (bQuality === -1 ? 99 : bQuality);
+        });
+
+        // Generate TVML with stream list
+        const streamItems = sortedStreams.slice(0, 25).map((stream, index) => {
             const qualityBadge = stream.quality ? `[${stream.quality}]` : "";
             const sizeBadge = stream.size || "";
             const badges = [qualityBadge, sizeBadge].filter(Boolean).join(" ");
+            const encodedUrl = encodeURIComponent(stream.url);
 
             return `
-            <listItemLockup onselect="playStream('${escapeXml(stream.url)}', '${escapeXml(movie.title)}', '${escapeXml(stream.name)}')">
+            <listItemLockup onselect="playWithOptions('${escapeXml(stream.url)}', '${escapeXml(movie.title)}', '${escapeXml(stream.name)}')">
                 <ordinal minLength="2">${index + 1}</ordinal>
                 <title>${escapeXml(stream.name)}</title>
                 <relatedContent>

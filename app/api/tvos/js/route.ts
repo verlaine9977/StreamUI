@@ -184,7 +184,7 @@ function playMedia(type, slug) {
     request.send();
 }
 
-// Play a stream URL directly
+// Play a stream URL directly with native player
 function playStream(url, title, description) {
     console.log("Playing stream:", url);
 
@@ -207,6 +207,68 @@ function playStream(url, title, description) {
     });
 
     player.play();
+}
+
+// Show player options and play
+function playWithOptions(url, title, description) {
+    console.log("Play with options:", url);
+
+    var encodedUrl = encodeURIComponent(url);
+    var encodedTitle = encodeURIComponent(title || "Video");
+
+    var alertString = \`<?xml version="1.0" encoding="UTF-8" ?>
+    <document theme="dark">
+        <alertTemplate>
+            <title>Select Player</title>
+            <description>\${escapeXML(title || "Select how to play")}</description>
+            <button onselect="playWithVLC('\${escapeXML(url)}')">
+                <text>VLC</text>
+            </button>
+            <button onselect="playWithInfuse('\${escapeXML(url)}', '\${escapeXML(title)}')">
+                <text>Infuse</text>
+            </button>
+            <button onselect="dismissModal(); playStream('\${escapeXML(url)}', '\${escapeXML(title)}', '\${escapeXML(description)}')">
+                <text>Native Player</text>
+            </button>
+            <button onselect="dismissModal()">
+                <text>Cancel</text>
+            </button>
+        </alertTemplate>
+    </document>\`;
+
+    var parser = new DOMParser();
+    var alertDoc = parser.parseFromString(alertString, "application/xml");
+    navigationDocument.presentModal(alertDoc);
+}
+
+// Play with VLC
+function playWithVLC(url) {
+    dismissModal();
+    console.log("Opening VLC with:", url);
+    // VLC for tvOS URL scheme
+    var vlcUrl = "vlc-x-callback://x-callback-url/stream?url=" + encodeURIComponent(url);
+
+    // Try to open VLC
+    if (typeof App !== "undefined" && App.openURL) {
+        App.openURL(vlcUrl);
+    } else {
+        // Fallback - show the URL
+        showAlert("VLC", "Install VLC from App Store, then copy this URL:\\n" + url);
+    }
+}
+
+// Play with Infuse
+function playWithInfuse(url, title) {
+    dismissModal();
+    console.log("Opening Infuse with:", url);
+    // Infuse URL scheme
+    var infuseUrl = "infuse://x-callback-url/play?url=" + encodeURIComponent(url);
+
+    if (typeof App !== "undefined" && App.openURL) {
+        App.openURL(infuseUrl);
+    } else {
+        showAlert("Infuse", "Install Infuse from App Store to use this player.");
+    }
 }
 
 // Play trailer (YouTube URL)
