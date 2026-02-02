@@ -127,9 +127,11 @@ export async function GET(
             const quality = stream.quality || "";
             const size = stream.size || "";
             const subtitle = [quality, size, stream.addon].filter(Boolean).join(" • ");
+            // Use proxy URL for better compatibility
+            const proxyUrl = `${baseUrl}/api/tvos/proxy?url=${encodeURIComponent(stream.url)}`;
 
             return `
-            <listItemLockup onselect="playWithOptions('${escapeXml(stream.url)}', '${escapeXml(movie.title)}', '${escapeXml(stream.name)}')">
+            <listItemLockup onselect="playWithOptions('${escapeXml(proxyUrl)}', '${escapeXml(movie.title)}', '${escapeXml(stream.name)}')">
                 <title>${escapeXml(stream.name)}</title>
                 <subtitle>${escapeXml(subtitle)}</subtitle>
             </listItemLockup>`;

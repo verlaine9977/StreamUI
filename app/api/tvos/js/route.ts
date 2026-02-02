@@ -244,7 +244,7 @@ function playStream(url, title, description) {
     }
 }
 
-// Play with options - use VLC if available, otherwise native player
+// Play with options - try native player, show external app options on failure
 function playWithOptions(url, title, description) {
     console.log("Attempting to play:", url);
 
@@ -253,21 +253,19 @@ function playWithOptions(url, title, description) {
         return;
     }
 
-    // Check if URL looks valid
     if (!url.startsWith("http://") && !url.startsWith("https://")) {
-        showAlert("Unsupported Stream", "This stream type is not supported. URL must be HTTP/HTTPS.");
+        showAlert("Unsupported Stream", "URL must be HTTP/HTTPS.");
         return;
     }
 
-    // Try VLC player first (native bridge)
+    // Try VLC bridge if available (native integration)
     if (typeof playWithVLC === "function") {
         console.log("Using VLC player");
         playWithVLC(url, title || "Video");
         return;
     }
 
-    // Fallback to native player
-    console.log("VLC not available, using native player");
+    // Try native player
     playStream(url, title, description);
 }
 
