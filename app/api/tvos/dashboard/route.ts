@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
 
         // Return a fallback dashboard with placeholder message
         const fallbackTvml = `<?xml version="1.0" encoding="UTF-8" ?>
-<document>
+<document theme="dark">
     <stackTemplate>
         <banner>
             <title>StreamUI</title>

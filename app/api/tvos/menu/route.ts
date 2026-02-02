@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     const baseUrl = forwardedHost ? `${forwardedProto}://${forwardedHost}` : request.nextUrl.origin;
 
     const tvml = `<?xml version="1.0" encoding="UTF-8" ?>
-<document>
+<document theme="dark">
     <menuBarTemplate>
         <menuBar>
             <menuItem id="dashboard" autoHighlight="true" onselect="menuItemSelected(event, '${baseUrl}/api/tvos/dashboard')">

@@ -34,12 +34,15 @@ export async function GET(request: NextRequest) {
             });
         }
 
-        // Generate profile grid
-        const profileItems = userProfiles.map(profile => `
-            <lockup onselect="selectProfile('${profile.id}', '${escapeXml(profile.name)}')">
-                <badge src="resource://person" class="whiteColor" style="tv-tint-color: ${profile.color || '#e94560'}" />
+        // Generate profile grid with monogram lockups
+        const profileItems = userProfiles.map(profile => {
+            const initial = profile.name.charAt(0).toUpperCase();
+            return `
+            <monogramLockup onselect="selectProfile('${profile.id}', '${escapeXml(profile.name)}')">
+                <monogram firstName="${escapeXml(profile.name)}" />
                 <title>${escapeXml(profile.name)}</title>
-            </lockup>`).join("\n");
+            </monogramLockup>`;
+        }).join("\n");
 
         const tvml = wrapDocument(`
     <stackTemplate>
@@ -47,11 +50,11 @@ export async function GET(request: NextRequest) {
             <title>Who's Watching?</title>
         </banner>
         <collectionList>
-            <grid>
+            <shelf centered="true">
                 <section>
                     ${profileItems}
                 </section>
-            </grid>
+            </shelf>
         </collectionList>
     </stackTemplate>`);
 
