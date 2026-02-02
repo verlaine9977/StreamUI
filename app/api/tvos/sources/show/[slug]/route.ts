@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { TraktClient } from "@/lib/trakt";
 import { wrapDocument, escapeXml, generateAlertTemplate } from "@/lib/tvos/tvml";
+import { db } from "@/lib/db";
+import { addons } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
+import { SINGLE_USER } from "@/lib/auth";
+import { AddonClient } from "@/lib/addons/client";
+import { parseStream } from "@/lib/addons/parser";
 
 const TRAKT_CLIENT_ID = process.env.NEXT_PUBLIC_TRAKT_CLIENT_ID;
 
@@ -9,6 +15,13 @@ export async function GET(
     { params }: { params: Promise<{ slug: string }> }
 ) {
     const { slug } = await params;
+    const season = request.nextUrl.searchParams.get("season");
+    const episode = request.nextUrl.searchParams.get("episode");
+
+    // Get the actual public URL from forwarded headers
+    const forwardedProto = request.headers.get("x-forwarded-proto") || "https";
+    const forwardedHost = request.headers.get("x-forwarded-host") || request.headers.get("host");
+    const baseUrl = forwardedHost ? `${forwardedProto}://${forwardedHost}` : request.nextUrl.origin;
 
     if (!TRAKT_CLIENT_ID) {
         const tvml = generateAlertTemplate(
@@ -29,30 +42,123 @@ export async function GET(
         const show = await trakt.getShow(slug);
         const imdbId = show.ids?.imdb;
 
-        // In a full implementation, this would:
-        // 1. Show season/episode picker
-        // 2. Fetch sources from configured Stremio addons
-        // 3. Check cache status on debrid services
-        // 4. Return a list of playable sources
+        if (!imdbId) {
+            const tvml = generateAlertTemplate(
+                "Error",
+                "No IMDB ID found for this show."
+            );
+            return new NextResponse(tvml, {
+                headers: { "Content-Type": "application/xml" },
+            });
+        }
 
-        // For now, show a placeholder with show info
+        // If season and episode provided, fetch sources
+        if (season && episode) {
+            // Get user's enabled addons
+            const userAddons = await db
+                .select()
+                .from(addons)
+                .where(eq(addons.userId, SINGLE_USER.id))
+                .orderBy(addons.order);
+
+            const enabledAddons = userAddons.filter(a => a.enabled);
+
+            if (enabledAddons.length === 0) {
+                const tvml = generateAlertTemplate(
+                    "No Addons Configured",
+                    "Please add Stremio addons in the StreamUI web app to get sources."
+                );
+                return new NextResponse(tvml, {
+                    headers: { "Content-Type": "application/xml" },
+                });
+            }
+
+            // Fetch streams from all enabled addons
+            const allStreams: Array<{ name: string; url: string; quality?: string; size?: string; addon: string }> = [];
+
+            await Promise.all(
+                enabledAddons.map(async (addon) => {
+                    try {
+                        const client = new AddonClient({ url: addon.url, timeout: 15000 });
+                        const response = await client.fetchTvStreams(imdbId, {
+                            season: parseInt(season),
+                            episode: parseInt(episode),
+                        });
+
+                        for (const stream of response.streams || []) {
+                            const parsed = parseStream(stream, addon.id, addon.name);
+                            if (parsed.url) {
+                                allStreams.push({
+                                    name: parsed.title || stream.name || "Unknown",
+                                    url: parsed.url,
+                                    quality: parsed.resolution,
+                                    size: parsed.size,
+                                    addon: addon.name,
+                                });
+                            }
+                        }
+                    } catch (error) {
+                        console.error(`Error fetching from addon ${addon.name}:`, error);
+                    }
+                })
+            );
+
+            if (allStreams.length === 0) {
+                const tvml = generateAlertTemplate(
+                    "No Sources Found",
+                    `No streams found for S${season}E${episode}. Try different addons.`
+                );
+                return new NextResponse(tvml, {
+                    headers: { "Content-Type": "application/xml" },
+                });
+            }
+
+            // Generate TVML with stream list
+            const streamItems = allStreams.slice(0, 20).map(stream => `
+                <listItemLockup onselect="playStream('${escapeXml(stream.url)}', '${escapeXml(show.title)} S${season}E${episode}', '${escapeXml(stream.name)}')">
+                    <title>${escapeXml(stream.name)}</title>
+                    <subtitle>${escapeXml(stream.addon)}${stream.quality ? ` • ${stream.quality}` : ""}${stream.size ? ` • ${stream.size}` : ""}</subtitle>
+                </listItemLockup>`).join("\n");
+
+            const tvml = wrapDocument(`
+    <listTemplate>
+        <banner>
+            <title>${escapeXml(show.title)}</title>
+            <subtitle>S${season}E${episode} • ${allStreams.length} sources</subtitle>
+        </banner>
+        <list>
+            <section>
+                ${streamItems}
+            </section>
+        </list>
+    </listTemplate>`);
+
+            return new NextResponse(tvml, {
+                headers: { "Content-Type": "application/xml" },
+            });
+        }
+
+        // No season/episode - show season picker
+        const seasons = await trakt.getShowSeasons(slug);
+
+        const seasonItems = seasons.map(s => `
+            <listItemLockup onselect="loadDocument('${baseUrl}/api/tvos/sources/show/${slug}/season/${s.number}')">
+                <title>Season ${s.number}</title>
+                <subtitle>${s.episode_count || s.aired_episodes || "?"} episodes</subtitle>
+            </listItemLockup>`).join("\n");
+
         const tvml = wrapDocument(`
-    <alertTemplate>
-        <title>${escapeXml(show.title)}</title>
-        <description>To play this show, you need to:
-
-1. Set up a debrid account in StreamUI web app
-2. Configure Stremio addons for sources
-3. Select a season and episode
-4. The sources will then appear here
-
-IMDB: ${imdbId || "N/A"}
-TMDB: ${show.ids?.tmdb || "N/A"}
-Episodes: ${show.aired_episodes || "N/A"}</description>
-        <button onselect="dismissModal()">
-            <text>OK</text>
-        </button>
-    </alertTemplate>`);
+    <listTemplate>
+        <banner>
+            <title>${escapeXml(show.title)}</title>
+            <subtitle>${seasons.length} seasons</subtitle>
+        </banner>
+        <list>
+            <section>
+                ${seasonItems}
+            </section>
+        </list>
+    </listTemplate>`);
 
         return new NextResponse(tvml, {
             headers: { "Content-Type": "application/xml" },
@@ -61,7 +167,7 @@ Episodes: ${show.aired_episodes || "N/A"}</description>
         console.error("Sources error:", error);
         const tvml = generateAlertTemplate(
             "Error",
-            "Failed to load sources. Please try again."
+            "Failed to load. Please try again."
         );
         return new NextResponse(tvml, {
             headers: { "Content-Type": "application/xml" },
