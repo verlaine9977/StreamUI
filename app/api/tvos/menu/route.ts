@@ -1,22 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 
 // Main menu with tab bar navigation
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
+    // Get the actual public URL from forwarded headers (when behind reverse proxy)
+    const forwardedProto = request.headers.get("x-forwarded-proto") || "https";
+    const forwardedHost = request.headers.get("x-forwarded-host") || request.headers.get("host");
+    const baseUrl = forwardedHost ? `${forwardedProto}://${forwardedHost}` : request.nextUrl.origin;
 
     const tvml = `<?xml version="1.0" encoding="UTF-8" ?>
 <document>
     <menuBarTemplate>
         <menuBar>
-            <menuItem id="dashboard" autoHighlight="true">
+            <menuItem id="dashboard" autoHighlight="true" onselect="menuItemSelected(event, '${baseUrl}/api/tvos/dashboard')">
                 <title>Home</title>
             </menuItem>
-            <menuItem id="search">
+            <menuItem id="search" onselect="menuItemSelected(event, '${baseUrl}/api/tvos/search')">
                 <title>Search</title>
             </menuItem>
-            <menuItem id="files">
+            <menuItem id="files" onselect="menuItemSelected(event, '${baseUrl}/api/tvos/files')">
                 <title>Files</title>
             </menuItem>
-            <menuItem id="settings">
+            <menuItem id="settings" onselect="menuItemSelected(event, '${baseUrl}/api/tvos/settings')">
                 <title>Settings</title>
             </menuItem>
         </menuBar>

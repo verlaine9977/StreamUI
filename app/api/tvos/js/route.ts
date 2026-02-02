@@ -259,40 +259,29 @@ function escapeXML(text) {
 }
 
 // Menu bar item selection handler
-function menuItemSelected(event) {
+function menuItemSelected(event, url) {
     var menuItem = event.target;
-    var menuId = menuItem.getAttribute("id");
     var feature = menuItem.parentNode.getFeature("MenuBarDocument");
 
-    console.log("Menu item selected:", menuId);
-
-    var url;
-    switch(menuId) {
-        case "dashboard":
-            url = baseURL + "/api/tvos/dashboard";
-            break;
-        case "search":
-            url = baseURL + "/api/tvos/search";
-            break;
-        case "files":
-            url = baseURL + "/api/tvos/files";
-            break;
-        case "settings":
-            url = baseURL + "/api/tvos/settings";
-            break;
-        default:
-            return;
-    }
+    console.log("Menu item selected, loading:", url);
 
     var request = new XMLHttpRequest();
     request.responseType = "document";
     request.addEventListener("load", function() {
+        console.log("Menu content loaded, status:", request.status);
         if (request.status >= 200 && request.status < 300) {
             var doc = request.responseXML;
             if (doc && feature) {
+                console.log("Setting document for menu item");
                 feature.setDocument(doc, menuItem);
+            } else {
+                console.error("No doc or feature", doc, feature);
             }
         }
+    }, false);
+
+    request.addEventListener("error", function(e) {
+        console.error("Menu content load error:", e);
     }, false);
 
     request.open("GET", url, true);
